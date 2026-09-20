@@ -17,6 +17,7 @@ try {
     output: process.stdout,
     error: process.stderr,
     version: packageJson.version,
+    noColorEnvironment: Object.hasOwn(process.env, "NO_COLOR"),
   });
 } catch {
   process.stderr.write("pikasay: 入力の読み取りに失敗しました。\n");
