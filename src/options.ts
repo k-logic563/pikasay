@@ -19,28 +19,38 @@ function isMood(value: string): value is Mood {
 }
 
 export function parseArguments(args: readonly string[]): ParsedArguments {
-  // Phase 1と同じく、help/versionは指定位置にかかわらず優先する。
-  if (args.includes("-h") || args.includes("--help")) {
+  // Help/version take priority wherever they appear before `--`. Arguments
+  // after the delimiter are always message text.
+  const delimiterIndex = args.indexOf("--");
+  const optionArgs =
+    delimiterIndex === -1 ? args : args.slice(0, delimiterIndex);
+  if (optionArgs.includes("-h") || optionArgs.includes("--help")) {
     return { kind: "help" };
   }
 
-  if (args.includes("-v") || args.includes("--version")) {
+  if (optionArgs.includes("-v") || optionArgs.includes("--version")) {
     return { kind: "version" };
   }
 
   let mood: Mood = "normal";
   let noColor = false;
   const messageParts: string[] = [];
+  let optionsEnded = false;
 
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
 
-    if (argument === "--no-color") {
+    if (!optionsEnded && argument === "--") {
+      optionsEnded = true;
+      continue;
+    }
+
+    if (!optionsEnded && argument === "--no-color") {
       noColor = true;
       continue;
     }
 
-    if (argument === "--mood") {
+    if (!optionsEnded && argument === "--mood") {
       const value = args[index + 1];
       if (value === undefined || !isMood(value)) {
         const received =
@@ -53,6 +63,13 @@ export function parseArguments(args: readonly string[]): ParsedArguments {
       mood = value;
       index += 1;
       continue;
+    }
+
+    if (!optionsEnded && argument?.startsWith("-")) {
+      return {
+        kind: "error",
+        message: `pikasay: 不明なオプションです: ${argument}\n詳しくは pikasay --help を実行してください。\n`,
+      };
     }
 
     if (argument !== undefined) {

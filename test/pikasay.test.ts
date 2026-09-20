@@ -7,7 +7,12 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { runCli } from "../src/app.js";
 import { parseArguments } from "../src/options.js";
-import { trimTrailingLineBreaks } from "../src/input.js";
+import {
+  ensureInputWithinLimit,
+  InputTooLongError,
+  MAX_INPUT_BYTES,
+  trimTrailingLineBreaks,
+} from "../src/input.js";
 import { displayWidth, renderMessage, wrapText } from "../src/render.js";
 
 const repositoryRoot = path.resolve(
@@ -114,8 +119,36 @@ test("表示オプションはメッセージの前後どちらでも解析で�
   );
 });
 
+test("--以降はオプションに見える文字列もメッセージとして扱う", () => {
+  assert.deepEqual(parseArguments(["--", "--help", "-から始まる"]), {
+    kind: "message",
+    message: "--help -から始まる",
+    mood: "normal",
+    noColor: false,
+  });
+});
+
+test("helpとversionは--より前ならほかの引数より優先する", () => {
+  assert.deepEqual(parseArguments(["--unknown", "--version"]), {
+    kind: "version",
+  });
+  assert.deepEqual(parseArguments(["--version", "--help", "message"]), {
+    kind: "help",
+  });
+});
+
 test("標準入力末尾の改行だけを取り除く", () => {
   assert.equal(trimTrailingLineBreaks("1行目\n2行目\n\n"), "1行目\n2行目");
+});
+
+test("入力上限以内を受理し、1 byte超過を拒否する", () => {
+  assert.doesNotThrow(() =>
+    ensureInputWithinLimit("a".repeat(MAX_INPUT_BYTES)),
+  );
+  assert.throws(
+    () => ensureInputWithinLimit("a".repeat(MAX_INPUT_BYTES + 1)),
+    InputTooLongError,
+  );
 });
 
 test("描画結果に通常状態のAAと複数行メッセージを含む", () => {
@@ -210,6 +243,13 @@ test("1つの日本語引数を表示できる", async () => {
   assert.match(result.stdout, /\( •ᴗ• \)/u);
 });
 
+test("英語、絵文字、結合文字を引数から安全に表示できる", async () => {
+  const message = "English 👨‍👩‍👧‍👦 e\u0301";
+  const result = await executeCli([message]);
+  assert.equal(result.code, 0);
+  assert.ok(result.stdout.includes(message));
+});
+
 test("複数引数を空白で結合して表示できる", async () => {
   const result = await executeCli(["複数の", "引数です"]);
   assert.equal(result.code, 0);
@@ -265,6 +305,21 @@ test("値のない--moodも分かりやすい利用エラーになる", async ()
   const result = await executeCli(["--mood"]);
   assert.equal(result.code, 1);
   assert.match(result.stderr, /値がありません/u);
+});
+
+test("不明なオプションは標準エラーへ案内して終了コード1を返す", async () => {
+  const result = await executeCli(["--unknown-option"]);
+  assert.equal(result.code, 1);
+  assert.equal(result.stdout, "");
+  assert.match(result.stderr, /不明なオプション/u);
+  assert.match(result.stderr, /pikasay --help/u);
+});
+
+test("--以降の-から始まる文字列をメッセージとして表示する", async () => {
+  const result = await executeCli(["--", "--helpではないメッセージ"]);
+  assert.equal(result.code, 0);
+  assert.equal(result.stderr, "");
+  assert.match(result.stdout, /--helpではないメッセージ/u);
 });
 
 test("正しいerrorモードは表示に成功して終了コード0を返す", async () => {
@@ -337,6 +392,8 @@ test("--helpはヘルプを標準出力へ表示する", async () => {
   assert.match(result.stdout, /--mood <normal\|success\|warning\|error>/u);
   assert.match(result.stdout, /--no-color/u);
   assert.match(result.stdout, /NO_COLOR/u);
+  assert.match(result.stdout, /65536 bytes/u);
+  assert.match(result.stdout, /-- の後/u);
 });
 
 test("-hは--helpの短縮形として動作する", async () => {
@@ -372,4 +429,61 @@ test("入力がない場合は標準エラーへ案内を表示して終了コ�
   assert.equal(result.stdout, "");
   assert.match(result.stderr, /メッセージがありません。/u);
   assert.match(result.stderr, /pikasay --help/u);
+});
+
+test("空文字列と空白だけの引数を入力なしとして拒否する", async () => {
+  for (const args of [[""], ["   \t"]]) {
+    const result = await executeCli(args);
+    assert.equal(result.code, 1);
+    assert.equal(result.stdout, "");
+    assert.match(result.stderr, /メッセージがありません。/u);
+  }
+});
+
+test("改行だけと空白だけの標準入力を拒否する", async () => {
+  for (const input of ["\n\r\n", "  \t  \n"] as const) {
+    const result = await executeCli([], input);
+    assert.equal(result.code, 1);
+    assert.equal(result.stdout, "");
+    assert.match(result.stderr, /メッセージがありません。/u);
+  }
+});
+
+test("上限以内の長い引数を処理できる", async () => {
+  const result = await runInjectedCli(["a".repeat(MAX_INPUT_BYTES)], {
+    inputIsTTY: true,
+    columns: 80,
+  });
+  assert.equal(result.code, 0);
+  assert.equal(result.stderr, "");
+  const messageLines = result.stdout.split("\n").slice(4, -1);
+  assert.ok(messageLines.every((line) => displayWidth(line) <= 80));
+});
+
+test("上限を超える引数はスタックトレースなしで拒否する", async () => {
+  const result = await runInjectedCli(["a".repeat(MAX_INPUT_BYTES + 1)], {
+    inputIsTTY: true,
+  });
+  assert.equal(result.code, 1);
+  assert.equal(result.stdout, "");
+  assert.match(result.stderr, /入力が長すぎます/u);
+  assert.doesNotMatch(result.stderr, /at runCli|InputTooLongError/u);
+});
+
+test("上限を超える標準入力は読み取り中に拒否する", async () => {
+  const result = await runInjectedCli([], {
+    input: "あ".repeat(Math.floor(MAX_INPUT_BYTES / 3) + 1),
+    inputIsTTY: false,
+  });
+  assert.equal(result.code, 1);
+  assert.equal(result.stdout, "");
+  assert.match(result.stderr, /入力が長すぎます/u);
+  assert.doesNotMatch(result.stderr, /at runCli|InputTooLongError/u);
+});
+
+test("入力内容をシェルコードとして解釈しない", async () => {
+  const message = "$(printf 危険) `uname` ; rm -rf example";
+  const result = await executeCli([message]);
+  assert.equal(result.code, 0);
+  assert.ok(result.stdout.includes(message));
 });

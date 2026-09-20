@@ -14,7 +14,8 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "npm run build && tsx --test test/*.test.ts",
+    "postbuild": "node -e \"require('node:fs').chmodSync('dist/cli.js', 0o755)\"",
+    "test": "npm run build && node --import tsx --test test/*.test.ts",
     "lint": "biome lint .",
     "format": "biome format --write .",
     "format:check": "biome format .",

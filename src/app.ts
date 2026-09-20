@@ -1,5 +1,11 @@
 import type { InputStream } from "./input.js";
-import { readStandardInput, trimTrailingLineBreaks } from "./input.js";
+import {
+  ensureInputWithinLimit,
+  InputTooLongError,
+  MAX_INPUT_BYTES,
+  readStandardInput,
+  trimTrailingLineBreaks,
+} from "./input.js";
 import { parseArguments } from "./options.js";
 import { renderMessage } from "./render.js";
 
@@ -28,6 +34,7 @@ export const HELP_TEXT = `ナキウサギがメッセージを一言しゃべり
   pikasay "こんにちは"
   pikasay --mood success "テスト、通ったよ"
   printf '確認が必要です\\n' | pikasay --mood warning
+  pikasay -- "--helpではないメッセージ"
 
 オプション:
   --mood <normal|success|warning|error>
@@ -38,6 +45,11 @@ export const HELP_TEXT = `ナキウサギがメッセージを一言しゃべり
 
 環境変数:
   NO_COLOR           値にかかわらず、存在する場合はANSIカラーを無効化
+
+入力:
+  UTF-8で最大 ${MAX_INPUT_BYTES} bytes。-から始まるメッセージは -- の後に指定
+
+詳しい使い方: README.md
 `;
 
 export const NO_INPUT_MESSAGE = `メッセージがありません。
@@ -77,16 +89,35 @@ export async function runCli(environment: CliEnvironment): Promise<number> {
   };
 
   if (parsed.kind === "message") {
-    const message = trimTrailingLineBreaks(parsed.message);
-    if (message.length > 0) {
-      render(message);
-      return 0;
+    try {
+      ensureInputWithinLimit(parsed.message);
+    } catch (error) {
+      if (error instanceof InputTooLongError) {
+        environment.error.write(`pikasay: ${error.message}\n`);
+        return 1;
+      }
+      throw error;
     }
+    const message = trimTrailingLineBreaks(parsed.message);
+    if (message.trim().length === 0) {
+      environment.error.write(NO_INPUT_MESSAGE);
+      return 1;
+    }
+    render(message);
+    return 0;
   } else if (environment.input.isTTY !== true) {
-    const message = await readStandardInput(environment.input);
-    if (message.length > 0) {
-      render(message);
-      return 0;
+    try {
+      const message = await readStandardInput(environment.input);
+      if (message.trim().length > 0) {
+        render(message);
+        return 0;
+      }
+    } catch (error) {
+      if (error instanceof InputTooLongError) {
+        environment.error.write(`pikasay: ${error.message}\n`);
+        return 1;
+      }
+      throw error;
     }
   }
 
