@@ -2,6 +2,23 @@
   "name": "pikasay",
   "version": "0.1.0",
   "description": "ナキウサギがターミナル上で一言しゃべるCLI",
+  "keywords": [
+    "cli",
+    "terminal",
+    "ascii-art",
+    "pika",
+    "command-line"
+  ],
+  "author": "k-logic563",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/k-logic563/pikasay.git"
+  },
+  "bugs": {
+    "url": "https://github.com/k-logic563/pikasay/issues"
+  },
+  "homepage": "https://github.com/k-logic563/pikasay#readme",
   "type": "module",
   "bin": {
     "pikasay": "./dist/cli.js"

@@ -18,15 +18,18 @@
 
 ## インストール
 
-現在はnpmレジストリへ未公開です。リポジトリを取得したディレクトリで依存関係をインストールし、ビルドして利用します。
+npmへ公開後は、グローバルインストールして利用できます。
 
 ```bash
-npm install
-npm run build
-node dist/cli.js "こんにちは"
+npm install --global pikasay
+pikasay "こんにちは"
 ```
 
-手元で`pikasay`コマンドとして試す場合は、ビルド後に`npm link`を実行できます。
+インストールせずに実行する場合は`npx`を利用できます。
+
+```bash
+npx pikasay "こんにちは"
+```
 
 ## 開発環境のセットアップ
 
@@ -110,10 +113,10 @@ pikasay -- "--helpではないメッセージ"
 実行例:
 
 ```bash
-pikasay --mood normal "作業を始めるよ"
+pikasay "こんにちは"
 pikasay --mood success "テスト、通ったよ"
-pikasay "未コミットの変更があります" --mood warning
-echo "ビルドに失敗しました" | pikasay --mood error
+echo "確認が必要です" | pikasay --mood warning
+pikasay --mood error "ビルドに失敗しました"
 ```
 
 `error`は表示上のモードです。正しく表示できた場合の終了コードは`0`です。不正なモード名は利用可能なモードを標準エラーへ示し、非ゼロで終了します。
@@ -151,4 +154,13 @@ pikasay --version
 
 ## ライセンス
 
-現時点ではライセンス未設定です。`LICENSE`ファイルはまだなく、再配布条件はPhase 4へ進む前に決定する必要があります。
+[MIT License](./LICENSE)です。
+
+Copyright (c) 2026 k-logic563
+
+ナキウサギのAAとメッセージ文言は、このプロジェクトで作成したオリジナル素材です。
+
+## リンク
+
+- GitHub: https://github.com/k-logic563/pikasay
+- Issues: https://github.com/k-logic563/pikasay/issues

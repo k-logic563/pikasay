@@ -83,7 +83,11 @@
 
 ## Phase 4: 公開前検証
 
-状態: 未着手
+状態: 再検証済み・No-Go（2026-09-20）
+
+MIT License、著作権者、公開用metadata、keywords、READMEの公開情報を確定し、公開予定tarballの作成、クリーン環境へのオフラインインストール、Node.js 22と24でのbuild・test・CLI実行、lint・format、公開ファイル、脆弱性、npmパッケージ名を再検証した。CLI本体とtarballに問題は見つからず、npmパッケージ名`pikasay`も現時点で利用可能と判断した。
+
+ただし、実行環境にGitHub CLIが存在せず、認証ユーザーとリポジトリ作成権限を確認できなかったため、許可された方法で空のPublicリポジトリ`k-logic563/pikasay`を作成できなかった。指定URLは404で、ローカルの`origin`は正しいURLを指しているものの公開先が存在しない。GitHubリポジトリ作成とURL再確認が完了するまでPhase 4は完了扱いにしない。
 
 ### 作業
 
