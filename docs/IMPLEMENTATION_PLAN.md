@@ -89,6 +89,8 @@ MIT License、著作権者、公開用metadata、keywords、READMEの公開情�
 
 GitHubリポジトリ`k-logic563/pikasay`がPublicで、リポジトリとIssuesの公開URLはどちらも200を返すことを確認した。所有者とリポジトリ名は指定どおりで、descriptionは`A cute pika that speaks in your terminal.`と一致する。リモート`main`はローカルHEADと同じコミットを指し、内容もこのプロジェクトと一致するため再利用可能と判断した。ローカルの`origin`も正しいURLを指している。すべての公開前条件を満たし、npm公開を妨げる既知の問題はないため、Phase 4をGoと判定した。
 
+`pikasay@0.1.0`を2026-09-25にnpmへ公開した。npmレジストリから取得したパッケージをNode.js v24.16.0で実行し、引数入力、標準入力、4モード、`--no-color`、`--help`、`--version`が正常に動作することを確認した。npmパッケージURLは<https://www.npmjs.com/package/pikasay>。GitHub側のコミット、push、タグ、Release作成は今回の公開作業では実施していないため、必要に応じて別作業で行う。
+
 ### 作業
 
 - クリーンな一時ディレクトリでパッケージをインストールして実行する。
